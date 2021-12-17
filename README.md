@@ -13,7 +13,7 @@ Microservice responsible for users and players.
 
 ## Architecture
 
-<img src="https://github.com/alessandroprudencio/TP-Api-Gateway/blob/develop/src/assets/microsservice-architeture.png" width="1220" alt="Architecture img" />
+<img src="https://github.com/alessandroprudencio/TP-Micro-Challenge-Back/blob/develop/src/assets/microsservice-architeture.png" width="1220" alt="Architecture img" />
 
 ## Installation
 
