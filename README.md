@@ -5,7 +5,7 @@
 [circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
 [circleci-url]: https://circleci.com/gh/nestjs/nest
 
-<p align="center">Tennis player connecting players.</p>
+<p align="center">Tennis Player, connecting tennis players.</p>
 
 ## Description
 
@@ -13,7 +13,7 @@ Microservice responsible for users and players.
 
 ## Architecture
 
-<img src="https://github.com/alessandroprudencio/TP-Api-Gateway/blob/develop/src/assets/microsservice-architeture.png" width="1220" alt="Architecture img" />
+<img src="https://github.com/alessandroprudencio/TP-Micro-Challenge-Back/blob/develop/src/assets/microsservice-architeture.png" width="1220" alt="Architecture img" />
 
 ## Installation
 
@@ -46,6 +46,14 @@ $ npm run test:e2e
 # test coverage
 $ npm run test:cov
 ```
+
+## Built with
+
+* [NestJS](https://nestjs.com/)
+* [RabbitMQ](https://www.rabbitmq.com/)
+* [MongoDB](https://www.mongodb.com/)
+* [Bitnami](https://bitnami.com/)
+* [AWS](https://aws.amazon.com/)
 
 ## Support
 
