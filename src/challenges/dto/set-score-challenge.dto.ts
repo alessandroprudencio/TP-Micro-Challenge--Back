@@ -1,7 +1,7 @@
 import { IsArray, IsNotEmpty, IsString } from 'class-validator';
-import { IResult } from '../interfaces/challenge.interface';
+import { IResult } from '../interfaces/result.interface';
 
-export class SetMatchChallengeDto {
+export class SetScoreChallengeDto {
   @IsNotEmpty()
   @IsString()
   winPlayer: string;

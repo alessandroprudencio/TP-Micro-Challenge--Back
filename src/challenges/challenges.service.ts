@@ -1,8 +1,12 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
+import { RpcException } from '@nestjs/microservices';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Player, PlayerDocument } from 'src/players/schemas/player.schema';
 import { CreateChallengeDto } from './dto/create-challenge.dto';
+import { SetScoreChallengeDto } from './dto/set-score-challenge.dto';
+import { UpdateChallengeDto } from './dto/update-challenge.dto';
+import { IChallengeStatus } from './interfaces/challenge-status.enum.interface';
 import { IChallenge } from './interfaces/challenge.interface';
 import { IPlayer } from './interfaces/player.interface';
 import { Challenge, ChallengeDocument } from './schemas/challenge.schema';
@@ -23,36 +27,37 @@ export class ChallengesService {
   async create(createChallengeDto: CreateChallengeDto): Promise<IChallenge> {
     const { dateTimeChallenge, requester, players } = createChallengeDto;
 
-    // Verifica se os jogadores informados estão cadastrados
+    // Pega todos os jogadores do desafio
     const allPlayers = await this.playerModel.find().populate('category', '_id name description');
+
+    if (allPlayers.length < 2) throw new InternalServerErrorException(`Challenge players not found`);
 
     const requesterCategory = allPlayers.find((item) => item._id == requester)?.category;
 
-    if (!requesterCategory) throw new BadRequestException(`Player without category`);
+    if (!requesterCategory) throw new RpcException(`Player without category`);
 
     players.map((playerDto) => {
       const player = allPlayers.find((player) => player._id == playerDto._id);
 
-      if (!player) throw new BadRequestException(`The id ${playerDto._id} is not player`);
+      if (!player) throw new RpcException(`The id ${playerDto._id} is not player`);
 
       // Não pode criar desafio se não perterncer a mesma categoria
       if (player.category._id !== requesterCategory._id) {
-        throw new BadRequestException(`It is not allowed to challenge player of another category`);
+        throw new RpcException(`It is not allowed to challenge player of another category`);
       }
     });
 
     // Verifica se o solicitante é um dos jogadores da partida
-
     const isPlayerChallenge = players.filter((item: IPlayer) => item._id == requester);
 
-    if (isPlayerChallenge.length === 0) throw new BadRequestException('Requester must be a player of the match');
+    if (isPlayerChallenge.length === 0) throw new RpcException('Requester must be a player of the match');
 
     // Verifica se o solicitante já tem desafio na data informada
 
     const IsExistChallenge = await this.challengeModel.findOne({ dateTimeChallenge }).where('requester', requester);
 
     if (IsExistChallenge)
-      throw new BadRequestException(`This player already has a challenge on this date: ${dateTimeChallenge}`);
+      throw new RpcException(`This player already has a challenge on this date: ${dateTimeChallenge}`);
 
     return await this.challengeModel.create({
       ...createChallengeDto,
@@ -60,31 +65,26 @@ export class ChallengesService {
     });
   }
 
-  // async update(
-  //   id: string,
-  //   updateChallengeDto: UpdateChallengeDto,
-  // ): Promise<IChallenge> {
-  //   const challenge = await this.foundChallengeById(id);
+  async update(id: string, updateChallengeDto: UpdateChallengeDto): Promise<IChallenge> {
+    const challenge = await this.foundChallengeById(id);
 
-  //   if (updateChallengeDto.status) {
-  //     challenge.dateTimeResponse = new Date();
-  //   }
+    if (challenge.status !== IChallengeStatus.PENDENTE)
+      throw new RpcException('Only status with PENDENTE challenge can be signed');
 
-  //   challenge.status = updateChallengeDto.status;
-  //   challenge.dateTimeChallenge = updateChallengeDto.dateTimeChallenge;
+    if (updateChallengeDto.status) {
+      challenge.dateTimeResponse = new Date();
+    }
 
-  //   return await this.challengeModel.findByIdAndUpdate(
-  //     challenge.id,
-  //     challenge,
-  //     {
-  //       returnOriginal: false,
-  //     },
-  //   );
-  // }
+    challenge.status = updateChallengeDto.status;
 
-  // async findOne(id: string): Promise<IChallenge> {
-  //   return await this.foundChallengeById(id);
-  // }
+    challenge.dateTimeChallenge = updateChallengeDto.dateTimeChallenge;
+
+    return await this.challengeModel.findByIdAndUpdate(id, updateChallengeDto);
+  }
+
+  async findOne(id: string): Promise<IChallenge> {
+    return await this.foundChallengeById(id);
+  }
 
   async findAll(): Promise<IChallenge[]> {
     return await this.challengeModel
@@ -98,67 +98,53 @@ export class ChallengesService {
       });
   }
 
-  // async delete(id: string): Promise<any> {
-  //   const challenge = await this.foundChallengeById(id);
+  async delete(id: string): Promise<void> {
+    await this.foundChallengeById(id);
 
-  //   return await this.challengeModel.findByIdAndUpdate(challenge.id, {
-  //     status: IChallengeStatus.CANCELADO,
-  //   });
-  // }
+    await this.challengeModel.deleteOne({ id });
+  }
 
-  // private async foundChallengeById(id: string): Promise<IChallenge> {
-  //   const foundChallenge = await this.challengeModel
-  //     .findById(id)
-  //     .populate('players', '_id name avatar');
+  private async foundChallengeById(id: string): Promise<IChallenge> {
+    const foundChallenge = await this.challengeModel.findById(id).populate('players', '_id name avatar');
 
-  //   if (!foundChallenge)
-  //     throw new NotFoundException(`Chanllenge with id ${id} not found`);
+    if (!foundChallenge) throw new NotFoundException(`Chanllenge with id ${id} not found`);
 
-  //   return foundChallenge;
-  // }
+    return foundChallenge;
+  }
 
-  // async setMatchChallenge(
-  //   id: string,
-  //   setMatchChallengeDto: SetMatchChallengeDto,
-  // ): Promise<IChallenge> {
-  //   // CREATE NEW MATCH WHEN MATCH IS FINALLY
+  async findChallengesPlayer(playerId: string): Promise<IChallenge[]> {
+    return await this.challengeModel.find().where('players', playerId);
+  }
 
-  //   const challenge = await this.foundChallengeById(id);
+  async setScore(id: string, setScoreChallengeDto: SetScoreChallengeDto): Promise<void> {
+    // CREATE NEW MATCH WHEN MATCH IS FINALLY
 
-  //   const { winPlayer } = setMatchChallengeDto;
+    const challenge = await this.foundChallengeById(id);
 
-  //   // Verificar se o jogador vencedor faz parte do desafio
-  //   const checkWinPlayer = challenge.players.find(
-  //     (item) => item._id.toString() === winPlayer,
-  //   );
+    const { winPlayer, result } = setScoreChallengeDto;
 
-  //   if (!checkWinPlayer)
-  //     throw new BadRequestException(
-  //       `Winning player is not part of this challenge`,
-  //     );
+    // Verificar se o jogador vencedor faz parte do desafio
+    const checkWinPlayer = challenge.players.find((item) => item.toString() === winPlayer);
 
-  //   // Criar partida
-  //   const match = new this.matchModel(setMatchChallengeDto);
+    if (!checkWinPlayer) throw new RpcException(`Winning player is not part of this challenge`);
 
-  //   match.category = challenge.category;
+    if (challenge.status === IChallengeStatus.REALIZADO)
+      throw new RpcException(`The match has already been played, it is not possible to change the result`);
 
-  //   match.players = challenge.players;
+    if (challenge.status !== IChallengeStatus.ACEITO)
+      throw new RpcException(
+        `It is not possible to enter the result of the challenge, if it has not been accepted yet`,
+      );
 
-  //   const result = await match.save();
+    // altera o status para finalizar e seta o placar
+    const newChallenge = {
+      status: IChallengeStatus.REALIZADO,
+      match: {
+        winPlayer,
+        result,
+      },
+    };
 
-  //   // quando a partida for registrada por um usuario, mudaremos o status do desafio para REALIZADO
-  //   challenge.status = IChallengeStatus.REALIZADO;
-
-  //   challenge.match = result._id;
-
-  //   try {
-  //     return await this.challengeModel.findByIdAndUpdate(id, challenge);
-  //   } catch (error) {
-  //     // se der erro removemos a partida criada anteriormente
-
-  //     await this.matchModel.deleteOne({ id: result._id });
-
-  //     throw new InternalServerErrorException();
-  //   }
-  // }
+    await this.challengeModel.findByIdAndUpdate(id, newChallenge);
+  }
 }

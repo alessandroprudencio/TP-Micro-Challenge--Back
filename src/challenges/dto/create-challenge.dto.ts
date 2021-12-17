@@ -7,6 +7,10 @@ export class CreateChallengeDto {
   requester: string;
 
   @IsString()
+  @IsNotEmpty()
+  category: string;
+
+  @IsString()
   message: string;
 
   @IsDateString()

@@ -8,60 +8,109 @@ import { IChallenge } from './interfaces/challenge.interface';
 export class ChallengesController {
   constructor(private challengeService: ChallengesService) {}
 
-  @EventPattern('challenge.findAll')
-  async findAll1(): Promise<IChallenge[]> {
-    return await this.challengeService.findAll();
+  @MessagePattern('find-all-challenge')
+  async findAll(): Promise<IChallenge[]> {
+    try {
+      return await this.challengeService.findAll();
+    } catch (error) {
+      throw new RpcException(error.message);
+    }
   }
 
-  @MessagePattern('challenge.findAll')
-  async findAll2(): Promise<IChallenge[]> {
-    return await this.challengeService.findAll();
-  }
-
-  @EventPattern('challenge.create')
+  @EventPattern('create-challenge')
   async create(@Payload() createChallengeDto: CreateChallengeDto, @Ctx() context: RmqContext): Promise<void> {
     const channel = context.getChannelRef();
+
     const originalMsg = context.getMessage();
 
     try {
       await this.challengeService.create(createChallengeDto);
     } catch (error) {
-      new RpcException(error.message);
+      throw new RpcException(error.message);
+    } finally {
+      console.log('deve fazer o ack');
+      channel.ack(originalMsg);
+    }
+  }
+
+  @MessagePattern('find-one-challenge')
+  async findOne(@Payload() id: string, @Ctx() context: RmqContext): Promise<IChallenge> {
+    const channel = context.getChannelRef();
+
+    const originalMsg = context.getMessage();
+
+    try {
+      return await this.challengeService.findOne(id);
+    } catch (error) {
+      throw new RpcException(error.message);
     } finally {
       channel.ack(originalMsg);
     }
   }
 
-  // @Get(':id')
-  // async findOne(
-  //   @Param('id', MongoIdValidation) id: string,
-  // ): Promise<IChallenge> {
-  //   return await this.challengeService.findOne(id);
-  // }
+  @MessagePattern('find-challenges-player')
+  async findChallengesPlayer(@Payload() playerId: string, @Ctx() context: RmqContext): Promise<IChallenge[]> {
+    const channel = context.getChannelRef();
 
-  // @Put(':id')
-  // @UsePipes(ValidationPipe)
-  // async update(
-  //   @Param('id', MongoIdValidation) id: string,
-  //   @Body() updateChallengeDto: UpdateChallengeDto,
-  // ): Promise<IChallenge> {
-  //   return await this.challengeService.update(id, updateChallengeDto);
-  // }
+    const originalMsg = context.getMessage();
 
-  // @Delete(':id')
-  // async remove(@Param('id') id: string) {
-  //   return await this.challengeService.delete(id);
-  // }
+    try {
+      return await this.challengeService.findChallengesPlayer(playerId);
+    } catch (error) {
+      throw new RpcException(error.message);
+    } finally {
+      channel.ack(originalMsg);
+    }
+  }
 
-  // @Post(':id/match')
-  // @UsePipes(ValidationPipe)
-  // async setMatchChallenge(
-  //   @Body() setMatchChallengeDto: SetMatchChallengeDto,
-  //   @Param('id') id: string,
-  // ): Promise<IChallenge> {
-  //   return await this.challengeService.setMatchChallenge(
-  //     id,
-  //     setMatchChallengeDto,
-  //   );
-  // }
+  @EventPattern('update-challenge')
+  async update(@Payload() updateChallengeDto: any, @Ctx() context: RmqContext): Promise<IChallenge> {
+    const channel = context.getChannelRef();
+
+    const originalMsg = context.getMessage();
+
+    try {
+      const id: string = updateChallengeDto.id;
+
+      const challenge: IChallenge = updateChallengeDto.challenge;
+
+      return await this.challengeService.update(id, challenge);
+    } catch (error) {
+      throw new RpcException(error.message);
+    } finally {
+      channel.ack(originalMsg);
+    }
+  }
+
+  @EventPattern('delete-challenge')
+  async remove(@Payload() id: string, @Ctx() context: RmqContext) {
+    const channel = context.getChannelRef();
+
+    const originalMsg = context.getMessage();
+
+    try {
+      await this.challengeService.delete(id);
+    } catch (error) {
+      throw new RpcException(error.message);
+    } finally {
+      channel.ack(originalMsg);
+    }
+  }
+
+  @EventPattern('set-score-challenge')
+  async setScoreChallenge(@Payload() setScoreChallenge: any, @Ctx() context: RmqContext) {
+    const channel = context.getChannelRef();
+
+    const originalMsg = context.getMessage();
+
+    const { id, result } = setScoreChallenge;
+
+    try {
+      await this.challengeService.setScore(id, result);
+    } catch (error) {
+      throw new RpcException(error.message);
+    } finally {
+      channel.ack(originalMsg);
+    }
+  }
 }
