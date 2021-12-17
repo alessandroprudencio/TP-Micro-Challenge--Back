@@ -40,7 +40,7 @@ export class CategoriesService {
     return await this.categoryModel.deleteOne({ id });
   }
 
-  private async foundCategoryById(id: string): Promise<ICategory> {
+  async foundCategoryById(id: string): Promise<ICategory> {
     const foundCategory = await this.categoryModel.aggregate([
       {
         $lookup: {

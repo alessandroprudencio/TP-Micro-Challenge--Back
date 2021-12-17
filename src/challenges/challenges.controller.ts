@@ -3,10 +3,18 @@ import { Ctx, EventPattern, MessagePattern, Payload, RmqContext, RpcException } 
 import { ChallengesService } from './challenges.service';
 import { CreateChallengeDto } from './dto/create-challenge.dto';
 import { IChallenge } from './interfaces/challenge.interface';
+import { ClientProxyRabbitMq } from 'src/proxyrmq/client-proxy';
+import { CategoriesService } from 'src/categories/categories.service';
 
 @Controller('api/v1/challenges')
 export class ChallengesController {
-  constructor(private challengeService: ChallengesService) {}
+  private clientRabbitMQRanking = this.clientProxy.getClientProxyRabbitmq('micro-ranking-back');
+
+  constructor(
+    private challengeService: ChallengesService,
+    private categoryService: CategoriesService,
+    private clientProxy: ClientProxyRabbitMq,
+  ) {}
 
   @MessagePattern('find-all-challenge')
   async findAll(): Promise<IChallenge[]> {
@@ -97,7 +105,7 @@ export class ChallengesController {
     }
   }
 
-  @EventPattern('set-score-challenge')
+  @EventPattern('set-result-challenge')
   async setScoreChallenge(@Payload() setScoreChallenge: any, @Ctx() context: RmqContext) {
     const channel = context.getChannelRef();
 
@@ -105,8 +113,14 @@ export class ChallengesController {
 
     const { id, result } = setScoreChallenge;
 
+    const challenge = await this.challengeService.findOne(id);
+
+    const category = await this.categoryService.foundCategoryById(challenge.category);
+
     try {
       await this.challengeService.setScore(id, result);
+
+      this.clientRabbitMQRanking.emit('proccess-ranking', { player: result.winPlayer, score: category.score });
     } catch (error) {
       throw new RpcException(error.message);
     } finally {
