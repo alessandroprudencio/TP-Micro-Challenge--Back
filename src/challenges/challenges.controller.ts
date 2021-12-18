@@ -36,7 +36,6 @@ export class ChallengesController {
     } catch (error) {
       throw new RpcException(error.message);
     } finally {
-      console.log('deve fazer o ack');
       channel.ack(originalMsg);
     }
   }

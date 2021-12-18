@@ -3,6 +3,7 @@ import { RpcException } from '@nestjs/microservices';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Player, PlayerDocument } from 'src/players/schemas/player.schema';
+import { ClientProxyRabbitMq } from 'src/proxyrmq/client-proxy';
 import { CreateChallengeDto } from './dto/create-challenge.dto';
 import { SetScoreChallengeDto } from './dto/set-score-challenge.dto';
 import { UpdateChallengeDto } from './dto/update-challenge.dto';
@@ -10,12 +11,19 @@ import { IChallengeStatus } from './interfaces/challenge-status.enum.interface';
 import { IChallenge } from './interfaces/challenge.interface';
 import { IPlayer } from './interfaces/player.interface';
 import { Challenge, ChallengeDocument } from './schemas/challenge.schema';
+import * as moment from 'moment';
+
+moment.locale('pt-br');
 
 @Injectable()
 export class ChallengesService {
+  private clientRabbitMQNotification = this.clientProxy.getClientProxyRabbitmq('micro-notification-back');
+
   constructor(
     @InjectModel(Challenge.name)
     private readonly challengeModel: Model<ChallengeDocument>,
+
+    private clientProxy: ClientProxyRabbitMq,
 
     // @InjectModel(Match.name)
     // private readonly matchModel: Model<MatchDocument>,
@@ -24,7 +32,7 @@ export class ChallengesService {
     private readonly playerModel: Model<PlayerDocument>,
   ) {}
 
-  async create(createChallengeDto: CreateChallengeDto): Promise<IChallenge> {
+  async create(createChallengeDto: CreateChallengeDto): Promise<void> {
     const { dateTimeChallenge, requester, players } = createChallengeDto;
 
     // Pega todos os jogadores do desafio
@@ -54,15 +62,37 @@ export class ChallengesService {
 
     // Verifica se o solicitante já tem desafio na data informada
 
-    const IsExistChallenge = await this.challengeModel.findOne({ dateTimeChallenge }).where('requester', requester);
+    const IsExistChallenge = await this.challengeModel
+      .findOne({ dateTimeChallenge })
+      .where('status', IChallengeStatus.ACEITO)
+      .where('requester', requester);
 
     if (IsExistChallenge)
-      throw new RpcException(`This player already has a challenge on this date: ${dateTimeChallenge}`);
+      throw new RpcException(
+        `This player already has a challenge with id ${IsExistChallenge.id} on this date: ${dateTimeChallenge}`,
+      );
 
-    return await this.challengeModel.create({
+    const resp = await this.challengeModel.create({
       ...createChallengeDto,
       category: requesterCategory._id,
     });
+
+    // send notification
+    this.sendNotificationOpponent(resp);
+  }
+
+  private async sendNotificationOpponent(challenge: IChallenge) {
+    const requestPlayer = await this.playerModel.findById(challenge.requester);
+    // const opponentPlayer = await this.playerModel.findById(challenge.players[1]);
+
+    const date = moment(challenge.dateTimeChallenge).format('llll');
+
+    const notification = {
+      requestPlayer,
+      date,
+    };
+
+    this.clientRabbitMQNotification.emit('create-notification-challenge', notification);
   }
 
   async update(id: string, updateChallengeDto: UpdateChallengeDto): Promise<IChallenge> {
