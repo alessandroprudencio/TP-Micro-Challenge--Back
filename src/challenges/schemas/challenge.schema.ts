@@ -1,5 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import * as mongoose from 'mongoose';
+import { Player } from 'src/players/schemas/player.schema';
 import { IChallengeStatus } from '../interfaces/challenge-status.enum.interface';
 import { IMatch } from '../interfaces/match.interface';
 import { MatchSchema } from './match.schema';
@@ -26,7 +27,7 @@ export class Challenge {
   @Prop({ type: mongoose.Schema.Types.ObjectId })
   category: string;
 
-  @Prop({ type: [{ type: mongoose.Schema.Types.ObjectId }] })
+  @Prop({ type: [{ type: mongoose.Schema.Types.ObjectId, ref: Player.name }] })
   players: Array<string>;
 
   @Prop({ type: MatchSchema })

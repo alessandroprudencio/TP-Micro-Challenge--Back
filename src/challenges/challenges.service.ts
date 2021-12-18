@@ -143,7 +143,13 @@ export class ChallengesService {
   }
 
   async findChallengesPlayer(playerId: string): Promise<IChallenge[]> {
-    return await this.challengeModel.find().where('players', playerId);
+    return await this.challengeModel
+      .find()
+      .populate('players', '_id name avatar')
+      .sort('status')
+      .where('players', playerId)
+      .where('status')
+      .in([IChallengeStatus.PENDENTE, IChallengeStatus.ACEITO]);
   }
 
   async setScore(id: string, setScoreChallengeDto: SetScoreChallengeDto): Promise<void> {
