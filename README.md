@@ -1,5 +1,5 @@
 <p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://github.com/alessandroprudencio/TP-Api-Gateway/blob/develop/src/assets/logo.png" width="200" alt="Nest Logo" /></a>
+  <a  target="blank"><img src="https://github.com/alessandroprudencio/TP-Micro-Notification/blob/develop/src/assets/logo.png" width="200" alt=" Logo" /></a>
 </p>
 
 [circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
@@ -49,11 +49,11 @@ $ npm run test:cov
 
 ## Built with
 
-* [NestJS](https://nestjs.com/)
-* [RabbitMQ](https://www.rabbitmq.com/)
-* [MongoDB](https://www.mongodb.com/)
-* [Bitnami](https://bitnami.com/)
-* [AWS](https://aws.amazon.com/)
+- [NestJS](https://nestjs.com/)
+- [RabbitMQ](https://www.rabbitmq.com/)
+- [MongoDB](https://www.mongodb.com/)
+- [Bitnami](https://bitnami.com/)
+- [AWS](https://aws.amazon.com/)
 
 ## Support
 
