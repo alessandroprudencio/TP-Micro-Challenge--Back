@@ -9,7 +9,7 @@
 
 ## Description
 
-Microservice responsible for users and players.
+Microservice responsible for managing new challenges.
 
 ## Architecture
 
