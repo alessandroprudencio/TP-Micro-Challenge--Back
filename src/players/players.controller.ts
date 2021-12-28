@@ -1,5 +1,5 @@
 import { BadRequestException, Controller } from '@nestjs/common';
-import { Ctx, EventPattern, Payload, RmqContext } from '@nestjs/microservices';
+import { Ctx, EventPattern, Payload, RmqContext, RpcException } from '@nestjs/microservices';
 import { CreatePlayerDto } from './dto/create-player.dto';
 import { PlayersService } from './players.service';
 
@@ -7,7 +7,9 @@ const ackErrors: string[] = ['E11000'];
 
 @Controller('api/v1/players')
 export class PlayersController {
-  constructor(private playerService: PlayersService) {}
+  constructor(private playerService: PlayersService) {
+    this.playerService = playerService;
+  }
 
   @EventPattern('create-player')
   async create(@Payload() createPlayerDto: CreatePlayerDto, @Ctx() context: RmqContext): Promise<void> {
@@ -61,6 +63,26 @@ export class PlayersController {
 
     try {
       await this.playerService.delete(id);
+    } finally {
+      await channel.ack(originalMsg);
+    }
+  }
+
+  @EventPattern('set-push-token')
+  async setPushToken(@Payload() updatePushToken: any, @Ctx() context: RmqContext) {
+    const channel = context.getChannelRef();
+
+    const originalMsg = context.getMessage();
+
+    try {
+      const { id, pushToken } = updatePushToken;
+
+      console.log('id=>', id);
+      console.log('pushToken=>', pushToken);
+
+      await this.playerService.update(id, { pushToken });
+    } catch (error) {
+      throw new RpcException(error.message);
     } finally {
       await channel.ack(originalMsg);
     }

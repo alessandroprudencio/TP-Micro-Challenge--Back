@@ -1,10 +1,10 @@
 import { Controller } from '@nestjs/common';
 import { Ctx, EventPattern, MessagePattern, Payload, RmqContext, RpcException } from '@nestjs/microservices';
+import { CategoriesService } from 'src/categories/categories.service';
+import { ClientProxyRabbitMq } from 'src/proxyrmq/client-proxy';
 import { ChallengesService } from './challenges.service';
 import { CreateChallengeDto } from './dto/create-challenge.dto';
 import { IChallenge } from './interfaces/challenge.interface';
-import { ClientProxyRabbitMq } from 'src/proxyrmq/client-proxy';
-import { CategoriesService } from 'src/categories/categories.service';
 
 @Controller('api/v1/challenges')
 export class ChallengesController {
@@ -14,14 +14,24 @@ export class ChallengesController {
     private challengeService: ChallengesService,
     private categoryService: CategoriesService,
     private clientProxy: ClientProxyRabbitMq,
-  ) {}
+  ) {
+    this.challengeService = challengeService;
+    this.categoryService = categoryService;
+    this.clientProxy = clientProxy;
+  }
 
   @MessagePattern('find-all-challenge')
-  async findAll(): Promise<IChallenge[]> {
+  async findAll(@Ctx() context: RmqContext): Promise<IChallenge[]> {
+    const channel = context.getChannelRef();
+
+    const originalMsg = context.getMessage();
+
     try {
       return await this.challengeService.findAll();
     } catch (error) {
       throw new RpcException(error.message);
+    } finally {
+      channel.ack(originalMsg);
     }
   }
 
@@ -118,6 +128,8 @@ export class ChallengesController {
 
     try {
       await this.challengeService.setScore(id, result);
+
+      console.log('setScore=>', { id, result });
 
       this.clientRabbitMQRanking.emit('proccess-ranking', { player: result.winPlayer, score: category.score });
     } catch (error) {

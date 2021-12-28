@@ -22,11 +22,17 @@ export class Player {
   @Prop()
   ranking: string;
 
+  @Prop({ maxlength: 250 })
+  avatar: string;
+
   @Prop()
   positionRanking: number;
 
   @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'Category' })
   category: ICategory;
+
+  @Prop()
+  pushToken?: string;
 }
 
 export const PlayerSchema = SchemaFactory.createForClass(Player);

@@ -1,4 +1,4 @@
-import { IsEmail, IsMongoId, IsNotEmpty, IsString } from 'class-validator';
+import { IsEmail, IsMongoId, IsNotEmpty, IsOptional, IsString } from 'class-validator';
 import { ICategory } from 'src/categories/interfaces/category.interface';
 
 export class CreatePlayerDto {
@@ -18,6 +18,14 @@ export class CreatePlayerDto {
   @IsNotEmpty()
   name: string;
 
+  @IsString()
+  @IsOptional()
+  avatar?: string;
+
   @IsNotEmpty()
   category: ICategory;
+
+  @IsString()
+  @IsOptional()
+  pushToken?: string;
 }

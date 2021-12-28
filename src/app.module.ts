@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
 import { config } from 'dotenv';
 import { CategoriesModule } from './categories/categories.module';
@@ -16,6 +17,9 @@ config();
     ChallengesModule,
     PlayersModule,
     CategoriesModule,
+    ConfigModule.forRoot({
+      isGlobal: true,
+    }),
   ],
 })
 export class AppModule {}

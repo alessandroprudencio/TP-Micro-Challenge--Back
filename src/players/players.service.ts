@@ -11,7 +11,9 @@ export class PlayersService {
   constructor(
     @InjectModel(Player.name)
     private readonly playerModel: Model<PlayerDocument>, // private categoriesService: CategoriesService,
-  ) {}
+  ) {
+    this.playerModel = playerModel;
+  }
 
   async create(createPlayerDto: CreatePlayerDto): Promise<void> {
     try {

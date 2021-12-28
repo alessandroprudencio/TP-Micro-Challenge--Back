@@ -1,7 +1,9 @@
 import { Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { RpcException } from '@nestjs/microservices';
 import { InjectModel } from '@nestjs/mongoose';
+import * as moment from 'moment';
 import { Model } from 'mongoose';
+import { INotification } from 'src/players/interfaces/notification.interface';
 import { Player, PlayerDocument } from 'src/players/schemas/player.schema';
 import { ClientProxyRabbitMq } from 'src/proxyrmq/client-proxy';
 import { CreateChallengeDto } from './dto/create-challenge.dto';
@@ -11,7 +13,6 @@ import { IChallengeStatus } from './interfaces/challenge-status.enum.interface';
 import { IChallenge } from './interfaces/challenge.interface';
 import { IPlayer } from './interfaces/player.interface';
 import { Challenge, ChallengeDocument } from './schemas/challenge.schema';
-import * as moment from 'moment';
 
 moment.locale('pt-br');
 
@@ -25,12 +26,15 @@ export class ChallengesService {
 
     private clientProxy: ClientProxyRabbitMq,
 
-    // @InjectModel(Match.name)
-    // private readonly matchModel: Model<MatchDocument>,
-
     @InjectModel(Player.name)
     private readonly playerModel: Model<PlayerDocument>,
-  ) {}
+  ) {
+    this.challengeModel = challengeModel;
+
+    this.playerModel = playerModel;
+
+    this.clientProxy = clientProxy;
+  }
 
   async create(createChallengeDto: CreateChallengeDto): Promise<void> {
     const { dateTimeChallenge, requester, players } = createChallengeDto;
@@ -83,14 +87,18 @@ export class ChallengesService {
 
   private async sendNotificationOpponent(challenge: IChallenge) {
     const requestPlayer = await this.playerModel.findById(challenge.requester);
-    // const opponentPlayer = await this.playerModel.findById(challenge.players[1]);
+    const opponentPlayer = await this.playerModel.findById(challenge.players[1]);
 
     const date = moment(challenge.dateTimeChallenge).format('llll');
 
-    const notification = {
-      requestPlayer,
-      date,
+    const notification: INotification = {
+      to: opponentPlayer.pushToken,
+      title: 'Você foi desafio 🔥',
+      body: `Você foi desafiado por ${requestPlayer.name}, para participar de uma partida no dia ${date}.`,
+      data: { ...requestPlayer, challengeId: challenge._id },
     };
+
+    console.log('new notification=>', notification);
 
     this.clientRabbitMQNotification.emit('create-notification-challenge', notification);
   }
@@ -149,7 +157,8 @@ export class ChallengesService {
       .sort('status')
       .where('players', playerId)
       .where('status')
-      .in([IChallengeStatus.PENDENTE, IChallengeStatus.ACEITO]);
+      .in([IChallengeStatus.PENDENTE, IChallengeStatus.ACEITO])
+      .sort({ updatedAt: -1 });
   }
 
   async setScore(id: string, setScoreChallengeDto: SetScoreChallengeDto): Promise<void> {
@@ -159,8 +168,10 @@ export class ChallengesService {
 
     const { winPlayer, result } = setScoreChallengeDto;
 
+    const players = challenge.players as unknown as IPlayer[];
+
     // Verificar se o jogador vencedor faz parte do desafio
-    const checkWinPlayer = challenge.players.find((item) => item.toString() === winPlayer);
+    const checkWinPlayer = players.find((player) => player._id.toString() === winPlayer.toString());
 
     if (!checkWinPlayer) throw new RpcException(`Winning player is not part of this challenge`);
 

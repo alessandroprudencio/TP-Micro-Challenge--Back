@@ -1,18 +1,15 @@
-import { IsNotEmpty } from 'class-validator';
+import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
 import { ICategory } from 'src/categories/interfaces/category.interface';
 
 export class UpdatePlayerDto {
-  // @IsNotEmpty()
-  // @IsString()
-  // phoneNumber: string;
-
-  // @IsNotEmpty()
-  // @IsString()
-  // name: string;
-
-  // @IsObject()
-  // avatar: string;
-
   @IsNotEmpty()
-  category: ICategory;
+  category?: ICategory;
+
+  @IsString()
+  @IsOptional()
+  pushToken?: string;
+
+  @IsString()
+  @IsOptional()
+  avatar?: string;
 }

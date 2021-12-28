@@ -9,4 +9,5 @@ export interface IPlayer extends Document {
   positionRanking: number;
   avatar: string;
   category: ICategory;
+  pushToken?: string;
 }

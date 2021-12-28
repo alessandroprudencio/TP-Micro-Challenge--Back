@@ -8,7 +8,9 @@ const ackErrors: string[] = ['E11000'];
 
 @Controller('api/v1/categories')
 export class CategoriesController {
-  constructor(private categoryService: CategoriesService) {}
+  constructor(private categoryService: CategoriesService) {
+    this.categoryService = categoryService;
+  }
 
   @EventPattern('create-category')
   async create(@Payload() createCategoryDto: CreateCategoryDto, @Ctx() context: RmqContext): Promise<void> {
