@@ -161,6 +161,17 @@ export class ChallengesService {
       .sort({ updatedAt: -1 });
   }
 
+  async historyChallengesPlayer(playerId: string): Promise<IChallenge[]> {
+    return await this.challengeModel
+      .find()
+      .populate('players', '_id name avatar')
+      .sort('status')
+      .where('players', playerId)
+      .where('status')
+      .in([IChallengeStatus.RECUSADO, IChallengeStatus.REALIZADO])
+      .sort({ updatedAt: -1 });
+  }
+
   async setScore(id: string, setScoreChallengeDto: SetScoreChallengeDto): Promise<void> {
     // CREATE NEW MATCH WHEN MATCH IS FINALLY
 

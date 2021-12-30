@@ -80,6 +80,21 @@ export class ChallengesController {
     }
   }
 
+  @MessagePattern('history-challenges-player')
+  async historyChallengesPlayer(@Payload() playerId: string, @Ctx() context: RmqContext): Promise<IChallenge[]> {
+    const channel = context.getChannelRef();
+
+    const originalMsg = context.getMessage();
+
+    try {
+      return await this.challengeService.historyChallengesPlayer(playerId);
+    } catch (error) {
+      throw new RpcException(error.message);
+    } finally {
+      channel.ack(originalMsg);
+    }
+  }
+
   @EventPattern('update-challenge')
   async update(@Payload() updateChallengeDto: any, @Ctx() context: RmqContext): Promise<IChallenge> {
     const channel = context.getChannelRef();
