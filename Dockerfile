@@ -6,8 +6,8 @@ RUN yarn global add @nestjs/cli
 
 WORKDIR /usr/tennis-player/tp-micro-challenge
 
-COPY . .
+COPY package*.json ./
 
 RUN yarn
 
-RUN yarn run build
+COPY . .

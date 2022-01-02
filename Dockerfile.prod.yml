@@ -1,0 +1,24 @@
+# the necessary build tools required for dependencies with native build (node-gyp, python, gcc, g++, make)
+# First Stage : to install and build dependences
+FROM node:16-alpine AS builder
+
+RUN apk add --no-cache bash
+
+WORKDIR /usr/tennis-player/tp-micro-challenge
+
+COPY package*.json ./
+
+RUN yarn install --only=production
+
+COPY . .
+
+RUN yarn run build
+
+# Second Stage : Setup command to run your app using lightweight node image
+FROM node:16-alpine
+
+WORKDIR /usr/tennis-player/tp-micro-challenge
+
+COPY --from=builder /usr/tennis-player/tp-micro-challenge ./
+
+ENTRYPOINT [ "yarn", "run", "start:prod" ]
